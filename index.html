@@ -1,223 +1,521 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Secret Santa 2025</title>
-<script src="https://cdn.tailwindcss.com"></script>
-<style>
-body { font-family: 'Inter', sans-serif; min-height: 100vh; background-color: #064e3b; display:flex; flex-direction:column; align-items:center; padding:20px; color:#f3f4f6; }
-#wheelCanvas { box-shadow:0 10px 25px rgba(0,0,0,0.4); border-radius:50%; border:8px solid #facc15; transition: transform 0.5s ease-out; }
-.spinner-indicator { width:0; height:0; border-style:solid; border-width:0 15px 25px 15px; border-color:transparent transparent #dc2626 transparent; position:absolute; top:0px; left:50%; transform:translateX(-50%); z-index:10; }
-.main-card { max-width:900px; width:100%; }
-</style>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Secret Santa 2025</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
+    <!-- Custom Tailwind Config for Christmas colors -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'christmas-red': '#dc2626', // Red 600
+                        'christmas-green': '#15803d', // Green 700
+                        'christmas-gold': '#facc15', // Amber 400
+                        'christmas-dark': '#064e3b', // Deep Green
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { 
+            font-family: 'Inter', sans-serif; 
+            min-height: 100vh; 
+            background-color: #064e3b; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            padding: 20px; 
+            color: #f3f4f6; /* This sets the text color for elements OUTSIDE the main card */
+        }
+        /* Canvas Styling */
+        #wheelCanvas { 
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4); 
+            border-radius: 50%; 
+            border: 8px solid #facc15; 
+            transition: transform 0.5s ease-out; 
+        }
+        /* Spinner Indicator (Triangle) */
+        .spinner-indicator { 
+            width: 0; 
+            height: 0; 
+            border-style: solid; 
+            border-width: 0 15px 25px 15px; 
+            border-color: transparent transparent #dc2626 transparent; 
+            position: absolute; 
+            top: 0px; 
+            left: 50%; 
+            transform: translateX(-50%); 
+            z-index: 10; 
+        }
+        /* Overall Layout Improvement */
+        .main-card { 
+            max-width: 900px; 
+            width: 100%; 
+        }
+        /* Table Styling */
+        #resultsTable td, #resultsTable th {
+            padding: 12px 24px;
+        }
+    </style>
 </head>
-<body>
-<div class="main-card bg-white p-6 md:p-10 rounded-xl shadow-2xl flex flex-col lg:flex-row lg:space-x-8 space-y-8 lg:space-y-0">
-  <div class="lg:w-1/2 space-y-6 flex flex-col items-center">
-    <h2 class="text-4xl font-extrabold text-christmas-red w-full text-center tracking-wide"> Secret Santa 2025 </h2>
-    <div class="w-full max-w-sm space-y-3">
-      <input type="email" id="emailInput" placeholder="Enter your email" class="w-full p-3 border border-gray-300 rounded-lg text-gray-700 shadow-sm transition duration-150" />
-      <div id="resultMessage" class="p-3 text-center text-sm font-bold rounded-lg bg-christmas-gold/20 text-christmas-dark border border-christmas-gold"> Enter your email </div>
-      <button onclick="spinWheel()" class="w-full bg-christmas-red hover:bg-red-700 text-white font-black text-lg py-3 rounded-xl shadow-lg"> Spin for the magic </button>
+<body class="bg-christmas-dark">
+<!-- FIX: Added 'text-gray-900' to the main card to ensure dark text on white background -->
+<div class="main-card bg-white text-gray-900 p-6 md:p-10 rounded-xl shadow-2xl flex flex-col lg:flex-row lg:space-x-8 space-y-8 lg:space-y-0">
+    
+    <!-- Left Column: Input, Wheel, and Result -->
+    <div class="lg:w-1/2 space-y-6 flex flex-col items-center">
+        <!-- Title is explicitly red, so it's fine -->
+        <h2 class="text-4xl font-extrabold text-christmas-red w-full text-center tracking-wide"> Secret Santa 2025 </h2>
+        
+        <!-- Input & Controls -->
+        <div class="w-full max-w-sm space-y-3">
+            <input 
+                type="email" 
+                id="emailInput" 
+                placeholder="Enter your email" 
+                oninput="checkAccessAndTableVisibility()"
+                class="w-full p-3 border border-gray-300 rounded-lg focus:ring-christmas-red focus:border-christmas-red text-gray-700 shadow-sm transition duration-150" 
+            />
+            <!-- Result message is explicitly colored dark, so it's fine -->
+            <div id="resultMessage" class="p-3 text-center text-sm font-bold rounded-lg bg-christmas-gold/20 text-christmas-dark border border-christmas-gold"> Enter your email </div>
+            <button 
+                onclick="spinWheel()" 
+                class="w-full bg-christmas-red hover:bg-red-700 text-white font-black text-lg py-3 rounded-xl shadow-lg transition duration-200 ease-in-out transform hover:scale-[1.03] active:scale-100"
+            > Spin for the magic </button>
+        </div>
+        
+        <!-- Wheel Display -->
+        <div class="relative flex justify-center w-full max-w-sm mt-6">
+            <div class="spinner-indicator absolute top-0"></div>
+            <canvas id="wheelCanvas" width="300" height="300"></canvas>
+        </div>
+        
     </div>
-    <div class="relative flex justify-center w-full max-w-sm mt-6">
-      <div class="spinner-indicator absolute top-0"></div>
-      <canvas id="wheelCanvas" width="300" height="300"></canvas>
+
+    <!-- Right Column: Admin Results Section (Hidden by default) -->
+    <div id="adminResultSection" class="lg:w-1/2" style="display:none;">
+        <!-- Title is explicitly gray-800, so it's fine -->
+        <h3 class="text-2xl font-semibold text-gray-800 border-b-2 border-christmas-red pb-2 mb-4">Admin Log (Sleigh Tracker)</h3>
+        <div class="admin-controls mb-4">
+            <button 
+                id="downloadButton" 
+                onclick="downloadCSV()" 
+                class="bg-christmas-green hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition duration-150"
+            > Download Sleigh Manifest (CSV) </button>
+        </div>
+
+        <!-- Table Structure -->
+        <div class="overflow-x-auto rounded-lg shadow-xl border border-christmas-red/50">
+            <table id="resultsTable" class="min-w-full divide-y divide-gray-200">
+                <thead>
+                    <tr class="bg-christmas-red text-white">
+                        <th class="px-6 py-3 text-left text-sm font-bold uppercase tracking-wider">Email (Santa)</th>
+                        <th class="px-6 py-3 text-center text-sm font-bold uppercase tracking-wider">Target Name</th>
+                    </tr>
+                </thead>
+                <tbody id="resultsTableBody" class="bg-white divide-y divide-gray-100">
+                    <!-- The text in the cells will now inherit the dark color from the main-card parent -->
+                    <tr><td colspan="2" class="px-6 py-4 text-sm text-gray-500 text-center italic">Enter the admin email to view history.</td></tr>
+                </tbody>
+            </table>
+        </div>
     </div>
-  </div>
-  <div id="adminResultSection" class="lg:w-1/2" style="display:none;">
-    <h3 class="text-2xl font-semibold text-gray-800 border-b-2 border-christmas-red pb-2 mb-4">Admin Log</h3>
-    <div class="overflow-x-auto rounded-lg shadow-xl border border-christmas-red/50">
-      <table id="resultsTable" class="min-w-full divide-y divide-gray-200">
-        <thead>
-          <tr class="bg-christmas-red text-white">
-            <th class="px-6 py-3 text-left text-sm font-bold uppercase tracking-wider">Email</th>
-            <th class="px-6 py-3 text-center text-sm font-bold uppercase tracking-wider">Secret Santa</th>
-          </tr>
-        </thead>
-        <tbody id="resultsTableBody" class="bg-white divide-y divide-gray-100">
-          <tr><td colspan="2" class="px-6 py-4 text-sm text-gray-500 text-center italic">Enter the admin email to view history.</td></tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
 </div>
- 
+ 
 <script>
 // ---------------- Participants ----------------
 const ALL_PARTICIPANTS = [
-  { name: "Adhoni, Arif", email: "arif.adhoni@ecolab.com" },
-  { name: "Adhyapak, Sanket", email: "sanket.adhyapak@ecolab.com" },
-  { name: "Agrawal, Sakshi", email: "sakshi.agrawal@ecolab.com" },
-  { name: "Ahamed, Bilal", email: "bilal.ahamed@ecolab.com" },
-  // ... add all participants here ...
+    { name: "Adhoni, Arif", email: "arif.adhoni@ecolab.com" },
+    { name: "Adhyapak, Sanket", email: "sanket.adhyapak@ecolab.com" },
+    { name: "Agrawal, Sakshi", email: "sakshi.agrawal@ecolab.com" },
+    { name: "Ahamed, Bilal", email: "bilal.ahamed@ecolab.com" },
+    { name: "Ajnas, Muhammed", email: "muhammed.ajnas@ecolab.com" },
+    { name: "Alam, Shadab", email: "shadab.alam@ecolab.com" },
+    { name: "Aleti, Ram Sai Durga Kiran", email: "ram.aleti@ecolab.com" },
+    { name: "Ali, Sharaf", email: "sharaf.ali@ecolab.com" },
+    { name: "Anand, Harsh", email: "harsh.anand@ecolab.com" },
+    { name: "Athale, Atharva", email: "atharva.athale@ecolab.com" },
+    { name: "Bandyopadhyay, Kaushik", email: "kaushik.bandyopadhyay@ecolab.com" },
+    { name: "Bansal, Hitesh", email: "hitesh.bansal@ecolab.com" },
+    { name: "Basak, Shrestha", email: "shrestha.basak@ecolab.com" },
+    { name: "Bhamre, Sumit", email: "sumit.bhamre@ecolab.com" },
+    { name: "Bhanushali, Miral", email: "miral.bhanushali@ecolab.com" },
+    { name: "Bhatale, Sachin", email: "sachin.bhatale@ecolab.com" },
+    { name: "Bhatewara, Saurabh", email: "saurabh.bhatewara@ecolab.com" },
+    { name: "Bijapure, Sarvesh", email: "sarvesh.bijapure@ecolab.com" },
+    { name: "Bose, Debangik", email: "debanga.bose@ecolab.com" },
+    { name: "Butola, Ajay", email: "ajay.butola@ecolab.com" },
+    { name: "Chakrabarti, Sahana", email: "sahana.chakrabarti@ecolab.com" },
+    { name: "Chamwad, Krushna", email: "krushna.chamwad@ecolab.com" },
+    { name: "Chandewar, Shreyash", email: "shreyash.chandewar@ecolab.com" },
+    { name: "Dharne, Prasad", email: "prasad.dharne@ecolab.com" },
+    { name: "Doundkar, Pratiksha", email: "pratiksha.doundkar@ecolab.com" },
+    { name: "Gaikwad, Amit", email: "amit.gaikwad@ecolab.com" },
+    { name: "Gaikwad, Pallavi", email: "pallavi.gaikwad@ecolab.com" },
+    { name: "Gaikwad, Pooja", email: "pooja.gaikwad@ecolab.com" },
+    { name: "Gandhi, Rutuja", email: "rutuja.gandhi@ecolab.com" },
+    { name: "Gundawar, Ayush", email: "ayush.gundawar@ecolab.com" },
+    { name: "Gupta, Akanksha Pallaby", email: "akanksha.gupta@ecolab.com" },
+    { name: "Gupta, Mukul", email: "mukul.gupta@ecolab.com" },
+    { name: "Halder, Aindrila", email: "aindrila.halder@ecolab.com" },
+    { name: "Jadhav, Riya", email: "riya.jadhav@ecolab.com" },
+    { name: "Jadhav, Sharad", email: "sharad.jadhav@ecolab.com" },
+    { name: "Jaiswal, Ashwani", email: "ashwani.jaiswal@ecolab.com" },
+    { name: "Joshi, Abhishek", email: "abhishek.joshi@ecolab.com" },
+    { name: "Joshi, Kaustubh", email: "kaustubh.joshi@ecolab.com" },
+    { name: "Joshi, Sourabh", email: "sourabh.joshi@ecolab.com" },
+    { name: "Kadu, Aditya", email: "aditya.kadu@ecolab.com" },
+    { name: "KAMBALE, POOJA", email: "pooja.kambale@ecolab.com" },
+    { name: "Khan, Mohd Mohsin", email: "mohsin.khan@ecolab.com" },
+    { name: "Khengre, Nikita", email: "nikita.khengre@ecolab.com" },
+    { name: "Khose, Praful", email: "praful.khose@ecolab.com" },
+    { name: "Kore, Sheetal", email: "sheetal.kore@ecolab.com" },
+    { name: "Kothere, Avinash", email: "avinash.kothere@ecolab.com" },
+    { name: "Kulakarani, Raghvendra", email: "raghvendra.kulakarani@ecolab.com" },
+    { name: "Kumar, Ankit", email: "ankit.kumar@ecolab.com" },
+    { name: "Kurade, Priti", email: "priti.kurade@ecolab.com" },
+    { name: "Majumder, Debdiptta", email: "debdiptta.majumder@ecolab.com" },
+    { name: "Mane, Sanika", email: "sanika.mane@ecolab.com" },
+    { name: "Mansi, Mansi", email: "mansi.mansi@ecolab.com" },
+    { name: "Mishra, Arpita", email: "arpita.mishra@ecolab.com" },
+    { name: "Mishra, Suman Saurav", email: "suman.mishra@ecolab.com" },
+    { name: "Mohapatra, Ankita", email: "ankita.mohapatra@ecolab.com" },
+    { name: "More, Kishan", email: "kishan.more@ecolab.com" },
+    { name: "Nagargoje, Santosh", email: "santosh.nagargoje@ecolab.com" },
+    { name: "Nair, Anuja", email: "anuja.nair@ecolab.com" },
+    { name: "Neb, Kartik", email: "kartik.neb@ecolab.com" },
+    { name: "Patel, Ankita", email: "ankita.patel@ecolab.com" },
+    { name: "Patel, Raunak", email: "raunak.patel@ecolab.com" },
+    { name: "Patil, Laxmikant", email: "laxmikant.patil@ecolab.com" },
+    { name: "Patil, Prithviraj", email: "prithviraj.patil@ecolab.com" },
+    { name: "Patil, Swapnil", email: "swapnil.patil@ecolab.com" },
+    { name: "Patne, Omkar", email: "omkar.patne@ecolab.com" },
+    { name: "Patwal, Manish", email: "manish.patwal@ecolab.com" },
+    { name: "Perepu, Vamshidhar", email: "vamshidhar.perepu@ecolab.com" },
+    { name: "Pilankar, Atharva", email: "atharva.pilankar@ecolab.com" },
+    { name: "Pinnu, Sai", email: "sai.pinnu@ecolab.com" },
+    { name: "Prabhu, Ankesh S", email: "ankesh.prabhu@ecolab.com" },
+    { name: "Pradhan, Pritam", email: "pritam.pradhan@ecolab.com" },
+    { name: "Punde, Nikita", email: "nikita.punde@ecolab.com" },
+    { name: "Sadolkar, Swapnil", email: "swapnil.sadolkar@ecolab.com" },
+    { name: "Sakhare, Ankita", email: "ankita.sakhare@ecolab.com" },
+    { name: "Salunke, Sanket", email: "sanket.salunke@ecolab.com" },
+    { name: "Samuel, Steffi", email: "steffi.samuel@ecolab.com" },
+    { name: "Sankpal, Gitanjali", email: "gitanjali.sankpal@ecolab.com" },
+    { name: "Sawant, Sushil", email: "sushil.sawant@ecolab.com" },
+    { name: "Shinde, Sachin", email: "sachin.shinde@ecolab.com" },
+    { name: "Shivaprasad, Pallavi", email: "pallavi.shivaprasad@ecolab.com" },
+    { name: "Singh, Pragya", email: "pragya.singh@ecolab.com" },
+    { name: "Sridhar, Aditi", email: "aditi.sridhar@ecolab.com" },
+    { name: "Suthar, Jayesh", email: "jayesh.suthar@ecolab.com" },
+    { name: "Tajne, Ujjwal", email: "ujjwal.tajne@ecolab.com" },
+    { name: "Takale, Shweta", email: "shweta.takale@ecolab.com" },
+    { name: "Thakare, Ajay", email: "ajay.thakare@ecolab.com" },
+    { name: "Thote, Adhiraj", email: "adhiraj.thote@ecolab.com" },
+    { name: "Vadali, V Raghu Rama Sarma", email: "raghu.vadali@ecolab.com" },
+    { name: "Verma, Kanchan", email: "kanchan.verma@ecolab.com" },
+    { name: "Vinu, Karthik", email: "karthik.vinu@ecolab.com" }
 ];
- 
+ 
 const KANCHAN_ADMIN_EMAIL = "kanchan.verma@ecolab.com";
- 
+ 
 const canvas = document.getElementById("wheelCanvas");
 const ctx = canvas.getContext("2d");
 const resultMessage = document.getElementById("resultMessage");
 const emailInput = document.getElementById("emailInput");
 const adminResultSection = document.getElementById("adminResultSection");
- 
+ 
+// Wheel colors for better segments visualization
+const christmasColors = [
+    "#dc2626", "#15803d", "#facc15", "#ef4444", "#22c55e",
+    "#fcd34d", "#b91c1c", "#4ade80", "#fb7185", "#34d399",
+];
+
 const WHEEL_DISPLAY_NAMES = ["🎁","🎄","❄️","🍪","🦌","🌟","🍬","☃️","🎅","🛷"];
 const total = WHEEL_DISPLAY_NAMES.length;
-const arc = (2*Math.PI)/total;
-const center = canvas.width/2;
-const radius = canvas.width/2;
- 
+const arc = (2 * Math.PI) / total;
+const center = canvas.width / 2;
+const radius = canvas.width / 2;
+ 
 let spinAngleStart = 0;
 let isSpinning = false;
- 
+ 
 // --------------- Storage ---------------
 function getResults() {
-  const storedResults = localStorage.getItem("spinResults");
-  return storedResults ? JSON.parse(storedResults) : [];
+  const storedResults = localStorage.getItem("spinResults");
+  return storedResults ? JSON.parse(storedResults) : [];
 }
 function saveResults(results) {
-  localStorage.setItem("spinResults", JSON.stringify(results));
+  localStorage.setItem("spinResults", JSON.stringify(results));
 }
+
+// Get the full participant object using email
+function getParticipant(email) {
+  return ALL_PARTICIPANTS.find(part => part.email.toLowerCase() === email.toLowerCase());
+}
+
+// Get the participant's name using email
 function getParticipantName(email) {
-  const p = ALL_PARTICIPANTS.find(part => part.email.toLowerCase()===email.toLowerCase());
-  return p ? p.name : null;
+  const p = getParticipant(email);
+  return p ? p.name : null;
 }
- 
+ 
 // ---------------- Wheel Drawing ----------------
 function drawWheel() {
-  ctx.clearRect(0,0,canvas.width,canvas.height);
-  for(let i=0;i<total;i++){
-    const angle = spinAngleStart + i*arc;
-    ctx.beginPath();
-    ctx.fillStyle = i%2===0 ? "#dc2626" : "#15803d";
-    ctx.moveTo(center,center);
-    ctx.arc(center,center,radius,angle,angle+arc);
-    ctx.fill();
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.strokeStyle = "#fff";
+  ctx.lineWidth = 1;
+  for(let i = 0; i < total; i++){
+    const angle = spinAngleStart + i * arc;
+    ctx.beginPath();
+    ctx.fillStyle = christmasColors[i % christmasColors.length];
+    ctx.moveTo(center, center);
+    ctx.arc(center, center, radius, angle, angle + arc);
+    ctx.fill();
     ctx.stroke();
-    ctx.save();
-    ctx.translate(center,center);
-    ctx.rotate(angle+arc/2);
-    ctx.fillStyle="#fff";
-    ctx.textAlign="right";
-    ctx.font='bold 16px sans-serif';
-    ctx.fillText(WHEEL_DISPLAY_NAMES[i], radius*0.9,5);
-    ctx.restore();
-  }
-  // center circle
-  ctx.beginPath();
-  ctx.arc(center,center,15,0,2*Math.PI);
-  ctx.fillStyle="#facc15";
-  ctx.fill();
+    ctx.save();
+    ctx.translate(center, center);
+    ctx.rotate(angle + arc / 2);
+    ctx.fillStyle = "#fff";
+    ctx.textAlign = "right";
+    ctx.font = '900 20px Inter, sans-serif'; // Use larger font for emojis
+    ctx.fillText(WHEEL_DISPLAY_NAMES[i], radius * 0.9, 8);
+    ctx.restore();
+  }
+  // center circle
+  ctx.beginPath();
+  ctx.arc(center, center, 15, 0, 2 * Math.PI);
+  ctx.fillStyle = "#facc15";
+  ctx.fill();
+  ctx.strokeStyle = '#fff';
+  ctx.lineWidth = 3;
+  ctx.stroke();
 }
- 
+ 
 // ---------------- Spin Animation ----------------
 function easeOut(t,b,c,d){t/=d;t--;return c*(t*t*t+1)+b;}
- 
+ 
 function spin(timestamp, spinTime, spinTimeTotal, finalStopAngle){
-  const timeElapsed = timestamp - spinTime;
-  if(timeElapsed>=spinTimeTotal){
-    isSpinning=false;
-    spinAngleStart = finalStopAngle;
-    drawWheel();
-    handleSpinResult();
-    return;
-  }
-  const rotationProgress = easeOut(timeElapsed,0,1,spinTimeTotal);
-  spinAngleStart = finalStopAngle*rotationProgress;
-  drawWheel();
-  requestAnimationFrame(ts=>spin(ts,spinTime,spinTimeTotal,finalStopAngle));
+  const timeElapsed = timestamp - spinTime;
+  if(timeElapsed >= spinTimeTotal){
+    isSpinning = false;
+    spinAngleStart = finalStopAngle;
+    drawWheel();
+    handleSpinResult();
+    return;
+  }
+    // Enable button in case of refresh or error during spin
+    document.querySelector('button[onclick="spinWheel()"]').disabled = true;
+
+  const rotationProgress = easeOut(timeElapsed, 0, 1, spinTimeTotal);
+  spinAngleStart = finalStopAngle * rotationProgress;
+  drawWheel();
+  requestAnimationFrame(ts => spin(ts, spinTime, spinTimeTotal, finalStopAngle));
 }
- 
+ 
 // ---------------- Main Spin Logic ----------------
 function spinWheel(){
-  if(isSpinning) return;
-  const email = emailInput.value.trim().toLowerCase();
-  const spinnerName = getParticipantName(email);
-  if(!spinnerName){
-    resultMessage.textContent = "❌ Your email is not registered.";
-    return;
-  }
-  let results = getResults();
-  if(results.find(r=>r.email===email)){
-    resultMessage.textContent = `You have already drawn! 🎁`;
-    return;
-  }
-  isSpinning=true;
-  const spinTime = performance.now();
-  const spinTimeTotal = Math.random()*3000+3000;
-  const finalVisualIndex = Math.floor(Math.random()*total);
-  const targetAngle = finalVisualIndex*arc+arc/2;
-  const extraRotations = Math.floor(Math.random()*5+5)*(2*Math.PI);
-  const finalStopAngle = extraRotations+targetAngle-Math.PI/2;
-  canvas.email = email;
-  canvas.selectedName = WHEEL_DISPLAY_NAMES[finalVisualIndex];
-  resultMessage.textContent="Spinning... 🎅";
-  requestAnimationFrame(ts=>spin(ts,spinTime,spinTimeTotal,finalStopAngle));
+    if(isSpinning) return;
+    const email = emailInput.value.trim().toLowerCase();
+    const spinnerName = getParticipantName(email);
+    
+    if(!spinnerName){
+        resultMessage.textContent = "❌ Error: Your email is not a registered participant.";
+        resultMessage.className = "p-3 text-center text-sm font-medium rounded-lg bg-red-200 text-red-800 border border-red-400";
+        return;
+    }
+    
+    let results = getResults();
+    const existingResult = results.find(r => r.email === email);
+
+    if(existingResult){
+        resultMessage.textContent = `You have already drawn! You are the Secret Santa for: ${existingResult.name} 🎁`;
+        resultMessage.className = "p-3 text-center text-sm font-black rounded-lg bg-christmas-green/40 text-christmas-dark border-2 border-christmas-green";
+        return;
+    }
+
+    isSpinning = true;
+    const button = document.querySelector('button[onclick="spinWheel()"]');
+    button.disabled = true;
+
+    const spinTime = performance.now();
+    const spinTimeTotal = Math.random() * 3000 + 3000;
+    const finalVisualIndex = Math.floor(Math.random() * total);
+    const targetAngle = finalVisualIndex * arc + arc / 2;
+    const extraRotations = Math.floor(Math.random() * 5 + 5) * (2 * Math.PI);
+    const initialOffset = Math.PI / 2;
+    const finalStopAngle = extraRotations + targetAngle - initialOffset;
+    
+    canvas.email = email;
+    resultMessage.textContent = "Spinning... Santa is checking his list!";
+    resultMessage.className = "p-3 text-center text-sm font-bold rounded-lg bg-christmas-gold/40 text-christmas-dark border border-christmas-gold";
+
+    requestAnimationFrame(ts => spin(ts, spinTime, spinTimeTotal, finalStopAngle));
 }
- 
+ 
 // ---------------- Result Handling ----------------
 function handleSpinResult(){
-  const email = canvas.email;
-  isSpinning=false;
-  let results = getResults();
-  if(results.find(r=>r.email===email)) return;
-  const spinnerName = getParticipantName(email);
-  let assignedNames = results.map(r=>r.name);
-  let availableTargets = ALL_PARTICIPANTS.map(p=>p.name).filter(n=>!assignedNames.includes(n) && n!==spinnerName);
-  
-  // Last-pick swap
-  if(availableTargets.length===0){
-    let previous = [...results];
-    for(let i=previous.length-1;i>=0;i--){
-      if(previous[i].name!==spinnerName){
-        const swapped = previous[i].name;
-        previous[i].name=spinnerName;
-        saveResults(previous.concat([{email,name:swapped}]));
-        resultMessage.textContent=`🎉 You are Secret Santa for: ${swapped} (swap)`;
+    const email = canvas.email;
+    const button = document.querySelector('button[onclick="spinWheel()"]');
+    button.disabled = false;
+    
+    let results = getResults();
+    // Check again in case of rapid actions or double-tap
+    if(results.find(r => r.email === email)) return; 
+
+    const spinnerName = getParticipantName(email);
+    const assignedEmails = results.map(r => r.email);
+
+    // 1. Get all names assigned so far
+    const assignedTargetNames = results.map(r => r.name);
+    
+    // 2. Identify available targets: must not be assigned AND must not be the spinner's own name
+    let availableTargetNames = ALL_PARTICIPANTS
+        .map(p => p.name)
+        .filter(targetName => 
+            !assignedTargetNames.includes(targetName) && 
+            targetName !== spinnerName
+        );
+    
+    if(availableTargetNames.length === 0){
+        // This is the challenging "last-person" scenario, which might require a swap if the last available target is the spinner
+        if (ALL_PARTICIPANTS.length > results.length && spinnerName) {
+            // There should be exactly one person left (the spinner), but they can't draw themselves.
+            // In a small pool, a forced swap is the safest way to ensure everyone gets a unique, non-self assignment.
+            // Since we use the ALL_PARTICIPANTS.length check, this block should ideally not be reached until the last person spins.
+            
+            let possibleSwaps = results.filter(r => r.name !== spinnerName);
+            if (possibleSwaps.length > 0) {
+                // Find someone whose current target is NOT the spinner, and swap them
+                const swapIndex = Math.floor(Math.random() * possibleSwaps.length);
+                const swapEntry = possibleSwaps[swapIndex];
+                
+                const originalTarget = swapEntry.name;
+                
+                // Update the original entry in the results list to point to the spinner's name
+                const originalEntryIndex = results.findIndex(r => r.email === swapEntry.email);
+                if (originalEntryIndex > -1) {
+                    results[originalEntryIndex].name = spinnerName; // Santa A now gifts Santa B
+                }
+                
+                // The spinner (Santa B) gets the original target
+                const newResult = { email, name: originalTarget, timestamp: new Date().toLocaleString() };
+                results.push(newResult);
+                saveResults(results);
+
+                resultMessage.textContent = `🎉 Congratulations! You are the Secret Santa for: ${originalTarget}! (Swap Applied)`;
+                resultMessage.className = "p-3 text-center text-sm font-black rounded-lg bg-christmas-green/40 text-christmas-dark border-2 border-christmas-green";
+                checkAccessAndTableVisibility();
+                return;
+            }
+        }
+        
+        // Final fallback error if assignment fails
+        resultMessage.textContent = "⚠️ All unique assignments complete or impossible. Contact admin.";
+        resultMessage.className = "p-3 text-center text-sm font-medium rounded-lg bg-red-200 text-red-800 border border-red-400";
+        checkAccessAndTableVisibility();
         return;
-      }
     }
-    resultMessage.textContent="⚠️ All assigned. Contact admin.";
-    return;
-  }
- 
-  const randomIndex = Math.floor(Math.random()*availableTargets.length);
-  const assignedName = availableTargets[randomIndex];
-  results.push({email,name:assignedName});
-  saveResults(results);
-  resultMessage.textContent=`🎉 You are Secret Santa for: ${assignedName}!`;
-  checkAccessAndTableVisibility();
+
+    // 3. Select a unique target from the available list
+    const randomIndex = Math.floor(Math.random() * availableTargetNames.length);
+    const assignedName = availableTargetNames[randomIndex];
+    
+    // 4. Save the new assignment
+    results.push({ email, name: assignedName, timestamp: new Date().toLocaleString() });
+    saveResults(results);
+    
+    // 5. Update message with the actual assigned name
+    resultMessage.textContent = `🎉 Congratulations! You are the Secret Santa for: ${assignedName}! 🎁`;
+    resultMessage.className = "p-3 text-center text-sm font-black rounded-lg bg-christmas-green/40 text-christmas-dark border-2 border-christmas-green";
+    
+    checkAccessAndTableVisibility();
 }
- 
+ 
 // ---------------- Admin Table ----------------
-function checkAccessAndTableVisibility(){
-  const currentEmail = emailInput.value.trim().toLowerCase();
-  const isAdmin = currentEmail===KANCHAN_ADMIN_EMAIL.toLowerCase();
-  adminResultSection.style.display = isAdmin?"block":"none";
-  if(isAdmin) updateTable();
+window.checkAccessAndTableVisibility = function(){
+  const currentEmail = emailInput.value.trim().toLowerCase();
+  const isAdmin = currentEmail === KANCHAN_ADMIN_EMAIL.toLowerCase();
+  adminResultSection.style.display = isAdmin ? "block" : "none";
+  if(isAdmin) updateTable();
 }
- 
+ 
 function updateTable(){
-  const tableBody = document.getElementById("resultsTableBody");
-  tableBody.innerHTML="";
-  const results=getResults();
-  if(results.length===0){
-    const row=tableBody.insertRow();
-    const cell=row.insertCell(0);
-    cell.colSpan=2;
-    cell.innerText="No spin results recorded yet.";
-    return;
-  }
-  results.forEach(r=>{
-    const row=tableBody.insertRow();
-    row.insertCell(0).innerText=r.email;
-    row.insertCell(1).innerText=r.name;
-  });
+  const tableBody = document.getElementById("resultsTableBody");
+  tableBody.innerHTML = "";
+  const results = getResults();
+  if(results.length === 0){
+    const row = tableBody.insertRow();
+    const cell = row.insertCell(0);
+    cell.colSpan = 2;
+    cell.className = 'px-6 py-4 text-sm text-gray-500 text-center italic';
+    cell.innerText = "No spin results recorded yet.";
+    return;
+  }
+    results.forEach(r => {
+        const row = tableBody.insertRow();
+        row.className = 'hover:bg-red-50/50 transition duration-150';
+
+        const emailCell = row.insertCell(0);
+        // Ensure email text is dark, using text-gray-700
+        emailCell.className = 'px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-700 text-left'; 
+        emailCell.innerText = r.email;
+
+        const nameCell = row.insertCell(1);
+        nameCell.className = 'px-6 py-4 whitespace-nowrap text-sm text-christmas-red text-center font-extrabold';
+        nameCell.innerText = r.name;
+    });
 }
- 
+
+window.downloadCSV = function() {
+    const currentEmail = emailInput.value.trim().toLowerCase();
+    // Use an error box instead of an alert
+    const showError = (message) => {
+        resultMessage.textContent = message;
+        resultMessage.className = "p-3 text-center text-sm font-medium rounded-lg bg-red-200 text-red-800 border border-red-400";
+    }
+
+    if (currentEmail !== KANCHAN_ADMIN_EMAIL.toLowerCase()) {
+        showError("Error: Access denied. Only the administrator can download this file.");
+        return;
+    }
+
+    const results = getResults();
+    if (results.length === 0) {
+        showError("No results to download!");
+        return;
+    }
+
+    let csv = "Timestamp,Santa Email,Target Name\n";
+    
+    results.forEach(r => {
+        // Use JSON.stringify to handle any commas within the name or email fields
+        csv += `"${r.timestamp || new Date().toLocaleString()}","${r.email}","${r.name}"\n`;
+    });
+
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement("a");
+    
+    link.setAttribute("href", URL.createObjectURL(blob));
+    link.setAttribute("download", "sleigh_manifest.csv");
+    link.style.visibility = 'hidden';
+    
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    resultMessage.textContent = "Sleigh Manifest downloaded successfully!";
+    resultMessage.className = "p-3 text-center text-sm font-black rounded-lg bg-christmas-green/40 text-christmas-dark border-2 border-christmas-green";
+}
+ 
 // ---------------- Initialization ----------------
-window.onload = ()=>{ drawWheel(); checkAccessAndTableVisibility(); };
+window.onload = () => { drawWheel(); checkAccessAndTableVisibility(); };
 </script>
 </body>
 </html>
