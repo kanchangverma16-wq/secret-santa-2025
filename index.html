@@ -31,7 +31,7 @@
             flex-direction: column; 
             align-items: center; 
             padding: 20px; 
-            color: #f3f4f6; /* This sets the text color for elements OUTSIDE the main card */
+            color: #f3f4f6; /* This sets the text color for elements OUTSIDE the main card (light gray) */
         }
         /* Canvas Styling */
         #wheelCanvas { 
@@ -65,12 +65,12 @@
     </style>
 </head>
 <body class="bg-christmas-dark">
-<!-- FIX: Added 'text-gray-900' to the main card to ensure dark text on white background -->
+<!-- The text color fix ('text-gray-900') is here, making all text inside this white box dark. -->
 <div class="main-card bg-white text-gray-900 p-6 md:p-10 rounded-xl shadow-2xl flex flex-col lg:flex-row lg:space-x-8 space-y-8 lg:space-y-0">
     
     <!-- Left Column: Input, Wheel, and Result -->
     <div class="lg:w-1/2 space-y-6 flex flex-col items-center">
-        <!-- Title is explicitly red, so it's fine -->
+        <!-- Title is text-christmas-red (should be clearly visible). -->
         <h2 class="text-4xl font-extrabold text-christmas-red w-full text-center tracking-wide"> Secret Santa 2025 </h2>
         
         <!-- Input & Controls -->
@@ -80,9 +80,10 @@
                 id="emailInput" 
                 placeholder="Enter your email" 
                 oninput="checkAccessAndTableVisibility()"
-                class="w-full p-3 border border-gray-300 rounded-lg focus:ring-christmas-red focus:border-christmas-red text-gray-700 shadow-sm transition duration-150" 
+                <!-- Added placeholder-gray-500 for robust dark placeholder text -->
+                class="w-full p-3 border border-gray-300 rounded-lg focus:ring-christmas-red focus:border-christmas-red text-gray-700 placeholder-gray-500 shadow-sm transition duration-150" 
             />
-            <!-- Result message is explicitly colored dark, so it's fine -->
+            <!-- Result message text is explicitly dark, so it's fine -->
             <div id="resultMessage" class="p-3 text-center text-sm font-bold rounded-lg bg-christmas-gold/20 text-christmas-dark border border-christmas-gold"> Enter your email </div>
             <button 
                 onclick="spinWheel()" 
@@ -100,7 +101,7 @@
 
     <!-- Right Column: Admin Results Section (Hidden by default) -->
     <div id="adminResultSection" class="lg:w-1/2" style="display:none;">
-        <!-- Title is explicitly gray-800, so it's fine -->
+        <!-- Title is explicitly dark, so it's fine -->
         <h3 class="text-2xl font-semibold text-gray-800 border-b-2 border-christmas-red pb-2 mb-4">Admin Log (Sleigh Tracker)</h3>
         <div class="admin-controls mb-4">
             <button 
@@ -120,7 +121,7 @@
                     </tr>
                 </thead>
                 <tbody id="resultsTableBody" class="bg-white divide-y divide-gray-100">
-                    <!-- The text in the cells will now inherit the dark color from the main-card parent -->
+                    <!-- Text inside cells is explicitly styled dark as well -->
                     <tr><td colspan="2" class="px-6 py-4 text-sm text-gray-500 text-center italic">Enter the admin email to view history.</td></tr>
                 </tbody>
             </table>
