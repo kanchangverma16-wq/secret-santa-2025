@@ -75,14 +75,16 @@
         
         <!-- Input & Controls -->
         <div class="w-full max-w-sm space-y-3">
+            <!-- Corrected: Comment moved outside the tag definition -->
             <input 
                 type="email" 
                 id="emailInput" 
                 placeholder="Enter your email" 
                 oninput="checkAccessAndTableVisibility()"
-                <!-- Added placeholder-gray-500 for robust dark placeholder text -->
                 class="w-full p-3 border border-gray-300 rounded-lg focus:ring-christmas-red focus:border-christmas-red text-gray-700 placeholder-gray-500 shadow-sm transition duration-150" 
             />
+            <!-- The class above includes placeholder-gray-500 for robust dark placeholder text -->
+
             <!-- Result message text is explicitly dark, so it's fine -->
             <div id="resultMessage" class="p-3 text-center text-sm font-bold rounded-lg bg-christmas-gold/20 text-christmas-dark border border-christmas-gold"> Enter your email </div>
             <button 
