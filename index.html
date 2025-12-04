@@ -4,300 +4,219 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Secret Santa 2025 🎅🎄</title>
- 
-<!-- Tailwind CSS -->
 <script src="https://cdn.tailwindcss.com"></script>
- 
-<!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
- 
-<!-- Google Font: Christmas Style -->
-<link href="https://fonts.googleapis.com/css2?family=Mountains+of+Christmas:wght@700&family=Nunito:wght@400;600&display=swap" rel="stylesheet">
- 
+<link href="https://fonts.googleapis.com/css2?family=Mountains+of+Christmas:wght@700&family=Nunito:wght@400&display=swap" rel="stylesheet">
+
 <style>
-    body {
-        background: url('https://i.imgur.com/4NJlH7E.png');
-        background-size: cover;
-        font-family: 'Nunito', sans-serif;
-        overflow-x: hidden;
-    }
- 
-    /* Snowfall */
-    .snow {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        pointer-events: none;
-        z-index: 9999;
-        background-image: url('https://i.imgur.com/7H5wQDa.png');
-        animation: snow 12s linear infinite;
-    }
- 
-    @keyframes snow {
-        0% { background-position: 0px 0px; }
-        100% { background-position: 0px 1000px; }
-    }
- 
-    /* Spin Wheel */
-    #wheel {
-        width: 260px;
-        height: 260px;
-        border-radius: 50%;
-        border: 12px solid #b30000;
-        position: relative;
-        overflow: hidden;
-        box-shadow: 0 0 20px rgba(255,0,0,0.5);
-    }
- 
-    #wheel div {
-        position: absolute;
-        width: 50%;
-        height: 50%;
-        background-size: 60%;
-        background-repeat: no-repeat;
-        background-position: center;
-        transform-origin: 100% 100%;
-    }
- 
-    #pointer {
-        width: 0; height: 0;
-        border-left: 18px solid transparent;
-        border-right: 18px solid transparent;
-        border-bottom: 30px solid #fff;
-        margin-bottom: 5px;
-        filter: drop-shadow(0 0 6px red);
-    }
- 
+body {
+    background: url('https://i.imgur.com/4NJlH7E.png');
+    background-size: cover;
+    font-family: 'Nunito', sans-serif;
+    overflow-x: hidden;
+}
+.snow {
+    position: fixed; top: 0; left: 0;
+    width: 100%; height: 100%;
+    pointer-events: none; z-index: 9999;
+    background-image: url('https://i.imgur.com/7H5wQDa.png');
+    animation: snow 12s linear infinite;
+}
+@keyframes snow { 0% { background-position:0 0; } 100% { background-position:0 1000px; } }
+#wheel {
+    width: 260px; height: 260px;
+    border-radius: 50%; border: 12px solid #b30000;
+    position: relative; overflow: hidden;
+    box-shadow: 0 0 20px rgba(255,0,0,0.5);
+}
+#wheel div {
+    position: absolute; width: 50%; height: 50%;
+    background-size: 60%; background-repeat: no-repeat;
+    background-position: center; transform-origin: 100% 100%;
+}
+#pointer {
+    width: 0; height: 0;
+    border-left: 18px solid transparent;
+    border-right: 18px solid transparent;
+    border-bottom: 30px solid #fff;
+    margin-bottom: 5px;
+    filter: drop-shadow(0 0 6px red);
+}
 </style>
- 
 </head>
- 
+
 <body class="flex flex-col items-center text-center py-10">
- 
 <div class="snow"></div>
- 
-<h1 class="text-4xl font-bold mb-3 text-red-700"
-    style="font-family:'Mountains of Christmas', cursive;">
-    🎄 Secret Santa 2025 🎅
+
+<h1 class="text-4xl font-bold mb-3 text-red-700" style="font-family:'Mountains of Christmas', cursive;">
+ 🎄 Secret Santa 2025 🎅
 </h1>
- 
+
 <p class="text-lg text-gray-700 mb-6">Enter your Ecolab email to spin the Christmas wheel!</p>
- 
-<!-- Email Input -->
-<input id="emailInput" type="email"
-    placeholder="Enter your email"
-    class="border px-4 py-2 rounded w-72 mb-4">
- 
-<!-- Wheel -->
+
+<input id="emailInput" type="email" placeholder="Enter your email"
+class="border px-4 py-2 rounded w-72 mb-4">
+
 <div id="pointer"></div>
 <div id="wheel"></div>
- 
-<!-- Spin Button -->
+
 <button onclick="spinWheel()" id="spinButton"
-    class="bg-red-600 text-white px-6 py-3 rounded-lg mt-5 hover:bg-red-700 shadow-lg">
-    🎁 Spin the Wheel
+class="bg-red-600 text-white px-6 py-3 rounded-lg mt-5 hover:bg-red-700 shadow-lg">
+ 🎁 Spin the Wheel
 </button>
- 
+
 <p id="resultText" class="mt-5 text-xl font-semibold text-green-800"></p>
- 
-<!-- Admin Panel -->
-<button onclick="showAdminLogin()" class="mt-8 text-sm underline text-gray-600">
-    Admin Panel
-</button>
- 
-<div id="adminLoginBox" class="hidden mt-3">
-    <input id="adminEmail" type="email"
-        placeholder="Admin Email"
-        class="border px-3 py-2 rounded w-72 mb-3" />
-    <button onclick="adminLogin()"
-        class="bg-gray-800 text-white px-4 py-2 rounded shadow">
-        Login
-    </button>
-</div>
- 
+
+<!-- ADMIN PANEL HIDDEN BY DEFAULT -->
 <div id="adminPanel" class="hidden mt-6 w-96 bg-white/90 shadow p-4 rounded">
-    <h2 class="text-xl font-semibold mb-3 text-red-700">Admin Panel</h2>
-    <button onclick="downloadCSV()"
-        class="bg-green-600 text-white px-4 py-2 rounded mb-4">
-        Download Assignments (CSV)
-    </button>
-    <div id="adminData" class="text-sm"></div>
+<h2 class="text-xl font-semibold mb-3 text-red-700">Admin Panel</h2>
+
+<button onclick="downloadCSV()" class="bg-green-600 text-white px-4 py-2 rounded mb-4">
+ Download Assignments (CSV)
+</button>
+<div id="adminData" class="text-sm"></div>
 </div>
- 
+
 <script>
- 
-    /* ----------------------------------------------------------
-       1. Allowed Users
-    ---------------------------------------------------------- */
-    const allowedUsers = {
-        "arif.adhoni@ecolab.com": "Adhoni, Arif",
-        "sanket.adhyapak@ecolab.com": "Adhyapak, Sanket",
-        "sakshi.agrawal@ecolab.com": "Agrawal, Sakshi",
-        "bilal.ahamed@ecolab.com": "Ahamed, Bilal",
-        "kanchan.verma@ecolab.com": "Verma, Kanchan",
-        "anuja.nair@ecolab.com": "Nair, Anuja",
-        "pragya.singh@ecolab.com": "Singh, Pragya"
-        // Add rest of the 150 names here
-    };
- 
-    /* ----------------------------------------------------------
-       2. Admin Emails
-    ---------------------------------------------------------- */
-    const adminEmails = [
-        "kanchan.verma@ecolab.com"
-      
-    ];
- 
-    /* ----------------------------------------------------------
-       3. Firebase Config
-    ---------------------------------------------------------- */
-    const firebaseConfig = {
-        apiKey: "AIzaSyCprZAsGsGtcDvxm376dFYuIXM5fvgZ8fY",
-        authDomain: "secret-santa2025.firebaseapp.com",
-        projectId: "secret-santa2025",
-        storageBucket: "secret-santa2025.firebasestorage.app",
-        messagingSenderId: "388087975466",
-        appId: "1:388087975466:web:3090c2ec5cd17bcccfbd53"
-    };
- 
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.firestore();
- 
-    /* ----------------------------------------------------------
-       4. Build Christmas Wheel (6 slices)
-    ---------------------------------------------------------- */
-    const icons = [
-        "https://i.imgur.com/1m9b3Ym.png", // Santa Hat
-        "https://i.imgur.com/MW8q4WU.png", // Bell
-        "https://i.imgur.com/nuHtvYd.png", // Candy Cane
-        "https://i.imgur.com/C4aWE2P.png", // Gift
-        "https://i.imgur.com/SrWbCqR.png", // Star
-        "https://i.imgur.com/H9zCg7q.png"  // Snowflake
-    ];
- 
-    const wheel = document.getElementById("wheel");
- 
-    icons.forEach((icon, i) => {
-        const slice = document.createElement("div");
-        slice.style.transform = `rotate(${i * 60}deg)`;
-        slice.style.backgroundImage = `url(${icon})`;
-        wheel.appendChild(slice);
-    });
- 
-    /* ----------------------------------------------------------
-       5. Spinner Function
-    ---------------------------------------------------------- */
-    async function spinWheel() {
- 
-        const email = document.getElementById("emailInput").value.trim().toLowerCase();
-        const resultText = document.getElementById("resultText");
-        const spinButton = document.getElementById("spinButton");
- 
-        if (!allowedUsers[email]) {
-            resultText.innerHTML = "❌ Your email is not allowed.";
-            return;
-        }
- 
-        const name = allowedUsers[email];
- 
-        spinButton.disabled = true;
-        resultText.innerHTML = "🎅 Spinning… 🎄";
- 
-        // Spin animation
-        const randomDeg = 3600 + Math.floor(Math.random() * 360);
-        wheel.style.transition = "all 4s cubic-bezier(.17,.67,.83,.67)";
-        wheel.style.transform = `rotate(${randomDeg}deg)`;
- 
-        // Wait for spin to finish
-        await new Promise(res => setTimeout(res, 4200));
- 
-        // Firestore check
-        const snapshot = await db.collection("assignments").get();
-        const assigned = snapshot.docs.map(d => d.data().receiver);
-        const allNames = Object.values(allowedUsers);
- 
-        const remaining = allNames.filter(n => n !== name && !assigned.includes(n));
- 
-        if (remaining.length === 0) {
-            resultText.innerHTML = "🎄 All names assigned!";
-            spinButton.disabled = false;
-            return;
-        }
- 
-        const pick = remaining[Math.floor(Math.random() * remaining.length)];
- 
-        await db.collection("assignments").doc(email).set({
-            giverEmail: email,
-            giverName: name,
-            receiver: pick,
-            timestamp: new Date()
-        });
- 
-        resultText.innerHTML = `🎁 ${name}, you got <b>${pick}</b>! 🎄`;
-        spinButton.disabled = false;
-    }
- 
-    /* ----------------------------------------------------------
-       6. Admin Login
-    ---------------------------------------------------------- */
-    function showAdminLogin() {
-        document.getElementById("adminLoginBox").classList.remove("hidden");
-    }
- 
-    function adminLogin() {
-        const email = document.getElementById("adminEmail").value.trim().toLowerCase();
-        if (adminEmails.includes(email)) {
-            loadAdminData();
-            document.getElementById("adminPanel").classList.remove("hidden");
-        } else {
-            alert("❌ Not an admin!");
-        }
-    }
- 
-    /* ----------------------------------------------------------
-       7. Load Admin Data
-    ---------------------------------------------------------- */
-    async function loadAdminData() {
-        const adminDataDiv = document.getElementById("adminData");
-        adminDataDiv.innerHTML = "Loading…";
- 
-        const snapshot = await db.collection("assignments").get();
- 
-        let html = "<ul>";
-        snapshot.forEach(doc => {
-            const d = doc.data();
-            html += `<li>${d.giverName} → ${d.receiver}</li>`;
-        });
-        html += "</ul>";
- 
-        adminDataDiv.innerHTML = html;
-    }
- 
-    /* ----------------------------------------------------------
-       8. Download CSV
-    ---------------------------------------------------------- */
-    async function downloadCSV() {
-        const snapshot = await db.collection("assignments").get();
- 
-        let csv = "Giver Name,Giver Email,Receiver\n";
-        snapshot.forEach(doc => {
-            const d = doc.data();
-            csv += `${d.giverName},${d.giverEmail},${d.receiver}\n`;
-        });
- 
-        const blob = new Blob([csv], { type: "text/csv" });
-        const url = URL.createObjectURL(blob);
- 
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = "secret_santa_assignments.csv";
-        a.click();
-    }
- 
+// Allowed Users
+const allowedUsers = {
+ "arif.adhoni@ecolab.com": "Adhoni, Arif",
+ "sanket.adhyapak@ecolab.com": "Adhyapak, Sanket",
+ "sakshi.agrawal@ecolab.com": "Agrawal, Sakshi",
+ "bilal.ahamed@ecolab.com": "Ahamed, Bilal",
+ "kanchan.verma@ecolab.com": "Verma, Kanchan",
+  "anuja.nair@ecolab.com": "Nair, Anuja",
+    "pragya.singh@ecolab.com": "Singh, Pragya"
+
+};
+
+// Admin Emails
+const adminEmails = ["kanchan.verma@ecolab.com"];
+
+// Firebase
+const firebaseConfig = {
+ apiKey: "AIzaSyCprZAsGsGtcDvxm376dFYuIXM5fvgZ8fY",
+ authDomain: "secret-santa2025.firebaseapp.com",
+ projectId: "secret-santa2025",
+ storageBucket: "secret-santa2025.firebasestorage.app",
+ messagingSenderId: "388087975466",
+ appId: "1:388087975466:web:3090c2ec5cd17bcccfbd53"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
+// Build Wheel
+const icons = [
+ "https://i.imgur.com/1m9b3Ym.png",
+ "https://i.imgur.com/MW8q4WU.png",
+ "https://i.imgur.com/nuHtvYd.png",
+ "https://i.imgur.com/C4aWE2P.png",
+ "https://i.imgur.com/SrWbCqR.png",
+ "https://i.imgur.com/H9zCg7q.png"
+];
+const wheel = document.getElementById("wheel");
+icons.forEach((icon, i) => {
+ const slice = document.createElement("div");
+ slice.style.transform = `rotate(${i * 60}deg)`;
+ slice.style.backgroundImage = `url(${icon})`;
+ wheel.appendChild(slice);
+});
+
+// Spin Logic
+async function spinWheel() {
+ const email = document.getElementById("emailInput").value.trim().toLowerCase();
+ const resultText = document.getElementById("resultText");
+ const spinButton = document.getElementById("spinButton");
+
+ if (!allowedUsers[email]) {
+     resultText.innerHTML = "❌ Your email is not allowed.";
+     return;
+ }
+ const name = allowedUsers[email];
+
+ spinButton.disabled = true;
+ resultText.innerHTML = "🎅 Spinning… 🎄";
+
+ const randomDeg = 3600 + Math.floor(Math.random() * 360);
+ wheel.style.transition = "all 4s cubic-bezier(.17,.67,.83,.67)";
+ wheel.style.transform = `rotate(${randomDeg}deg)`;
+
+ await new Promise(res => setTimeout(res, 4200));
+
+ const snapshot = await db.collection("assignments").get();
+ const assigned = snapshot.docs.map(d => d.data().receiver);
+ const allNames = Object.values(allowedUsers);
+ const remaining = allNames.filter(n => n !== name && !assigned.includes(n));
+
+ if (remaining.length === 0) {
+     resultText.innerHTML = "🎄 All names assigned!";
+     spinButton.disabled = false;
+     return;
+ }
+
+ const pick = remaining[Math.floor(Math.random() * remaining.length)];
+
+ await db.collection("assignments").doc(email).set({
+     giverEmail: email,
+     giverName: name,
+     receiver: pick,
+     timestamp: new Date()
+ });
+
+ resultText.innerHTML = `🎁 ${name}, you got <b>${pick}</b>! 🎄`;
+ spinButton.disabled = false;
+}
+
+// Secret Admin URL
+window.onload = () => {
+ if (window.location.hash === "#admin") {
+     const email = prompt("Enter admin email:");
+     if (adminEmails.includes(email.trim().toLowerCase())) {
+         loadAdminData();
+         document.getElementById("adminPanel").classList.remove("hidden");
+     } else {
+         alert("❌ Not an admin!");
+     }
+ }
+};
+
+// Load Admin Data
+async function loadAdminData() {
+ const adminDataDiv = document.getElementById("adminData");
+ adminDataDiv.innerHTML = "Loading…";
+
+ const snapshot = await db.collection("assignments").get();
+ let html = "<ul>";
+
+ snapshot.forEach(doc => {
+     const d = doc.data();
+     html += `<li>${d.giverName} → ${d.receiver}</li>`;
+ });
+
+ html += "</ul>";
+ adminDataDiv.innerHTML = html;
+}
+
+// CSV Download
+async function downloadCSV() {
+ const snapshot = await db.collection("assignments").get();
+ let csv = "Giver Name,Giver Email,Receiver
+";
+
+ snapshot.forEach(doc => {
+     const d = doc.data();
+     csv += `${d.giverName},${d.giverEmail},${d.receiver}
+`;
+ });
+
+ const blob = new Blob([csv], { type: "text/csv" });
+ const url = URL.createObjectURL(blob);
+ const a = document.createElement("a");
+ a.href = url;
+ a.download = "secret_santa_assignments.csv";
+ a.click();
+}
 </script>
- 
 </body>
 </html>
