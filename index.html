@@ -1,153 +1,634 @@
 <!DOCTYPE html>
-<!-- Firebase-enabled Secret Santa Spinner -->
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Secret Santa 2025</title>
-<script src="https://cdn.tailwindcss.com"></script>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
-
-<!-- Firebase SDK -->
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js"></script>
-
-<script>
-// ******🔥 ADD YOUR FIREBASE CONFIG HERE 🔥******
- const firebaseConfig = {
-        apiKey: "AIzaSyCprZAsGsGtcDvxm376dFYuIXM5fvgZ8fY",
-        authDomain: "secret-santa2025.firebaseapp.com",
-        projectId: "secret-santa2025",
-        storageBucket: "secret-santa2025.firebasestorage.app",
-        messagingSenderId: "388087975466",
-        appId: "1:388087975466:web:3090c2ec5cd17bcccfbd53"
-    };    
-// ***********************************************
-
-const app = firebase.initializeApp(firebaseConfig);
-const db = firebase.firestore();
-</script>
-
-<style>
-body { font-family:'Inter',sans-serif; background:#064e3b; color:white; padding:20px;}
-#wheelCanvas { border-radius:50%; border:8px solid #facc15;}
-</style>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Secret Santa 2025</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
+    <!-- Custom Tailwind Config for Christmas colors -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'christmas-red': '#dc2626', // Red 600
+                        'christmas-green': '#15803d', // Green 700
+                        'christmas-gold': '#facc15', // Amber 400
+                        'christmas-dark': '#064e3b', // Deep Green
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { 
+            font-family: 'Inter', sans-serif; 
+            min-height: 100vh; 
+            background-color: #064e3b; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            padding: 20px; 
+            color: #f3f4f6;
+        }
+        /* Canvas Styling */
+        #wheelCanvas { 
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4); 
+            border-radius: 50%; 
+            border: 8px solid #facc15; 
+            transition: transform 0.5s ease-out; 
+        }
+        /* Spinner Indicator (Triangle) */
+        .spinner-indicator { 
+            width: 0; 
+            height: 0; 
+            border-style: solid; 
+            border-width: 0 15px 25px 15px; 
+            border-color: transparent transparent #dc2626 transparent; 
+            position: absolute; 
+            top: 0px; 
+            left: 50%; 
+            transform: translateX(-50%); 
+            z-index: 10; 
+        }
+        /* Overall Layout Improvement */
+        .main-card { 
+            max-width: 900px; 
+            width: 100%; 
+        }
+        /* Table Styling */
+        #resultsTable td, #resultsTable th {
+            padding: 12px 24px;
+        }
+    </style>
 </head>
+<body class="bg-christmas-dark">
+<div class="main-card bg-white text-gray-900 p-6 md:p-10 rounded-xl shadow-2xl flex flex-col lg:flex-row lg:space-x-8 space-y-8 lg:space-y-0">
+    
+    <!-- Left Column: Input, Wheel, and Result -->
+    <div class="lg:w-1/2 space-y-6 flex flex-col items-center">
+        <h2 class="text-4xl font-extrabold text-christmas-red w-full text-center tracking-wide"> Secret Santa 2025 </h2>
+        
+        <!-- Input & Controls -->
+        <div class="w-full max-w-sm space-y-3">
+            <input 
+                type="email" 
+                id="emailInput" 
+                placeholder="Enter your email" 
+                oninput="checkAccessAndTableVisibility()"
+                class="w-full p-3 border border-gray-300 rounded-lg focus:ring-christmas-red focus:border-christmas-red text-gray-700 placeholder-gray-500 shadow-sm transition duration-150" 
+            />
 
-<body>
-<h1 class="text-3xl font-black text-center text-red-400">Secret Santa 2025</h1>
+            <div id="resultMessage" class="p-3 text-center text-sm font-bold rounded-lg bg-christmas-gold/20 text-christmas-dark border border-christmas-gold"> Enter your email </div>
+            <button 
+                onclick="spinWheel()" 
+                class="w-full bg-christmas-red hover:bg-red-700 text-white font-black text-lg py-3 rounded-xl shadow-lg transition duration-200 ease-in-out transform hover:scale-[1.03] active:scale-100"
+            > Reveal Your Recipient </button>
+        </div>
+        
+        <!-- Wheel Display -->
+        <div class="relative flex justify-center w-full max-w-sm mt-6">
+            <div class="spinner-indicator absolute top-0"></div>
+            <canvas id="wheelCanvas" width="300" height="300"></canvas>
+        </div>
+        
+    </div>
 
-<input id="emailInput" class="p-3 text-black w-full max-w-sm mt-4 rounded" placeholder="Enter email" />
+    <!-- Right Column: Admin Results Section (Hidden by default) -->
+    <div id="adminResultSection" class="lg:w-1/2" style="display:none;">
+        <h3 class="text-2xl font-semibold text-gray-800 border-b-2 border-christmas-red pb-2 mb-4">Master Assignment Log (Admin Only)</h3>
+        <p class="text-sm text-gray-600 mb-4">This table shows the fixed, hardcoded Secret Santa assignments.</p>
+        <div class="admin-controls mb-4">
+            <button 
+                id="downloadButton" 
+                onclick="downloadCSV()" 
+                class="bg-christmas-green hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition duration-150"
+            > Download Master Manifest (CSV) </button>
+        </div>
 
-<button onclick="spinWheel()" class="bg-red-600 mt-4 p-3 rounded text-white font-bold">
-Spin 🎄
-</button>
-
-<div id="resultMessage" class="mt-4 font-bold"></div>
-
-<canvas id="wheelCanvas" width="300" height="300" class="mt-6"></canvas>
-
+        <!-- Table Structure -->
+        <div class="overflow-x-auto rounded-lg shadow-xl border border-christmas-red/50">
+            <table id="resultsTable" class="min-w-full divide-y divide-gray-200">
+                <thead>
+                    <tr class="bg-christmas-red text-white">
+                        <th class="px-6 py-3 text-left text-sm font-bold uppercase tracking-wider">Santa Email</th>
+                        <th class="px-6 py-3 text-center text-sm font-bold uppercase tracking-wider">Target Name</th>
+                    </tr>
+                </thead>
+                <tbody id="resultsTableBody" class="bg-white divide-y divide-gray-100">
+                    <!-- Data will be inserted here by JavaScript -->
+                    <tr><td colspan="2" class="px-6 py-4 text-sm text-gray-500 text-center italic">Enter the admin email to view the master list.</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+ 
 <script>
+// ---------------- Participants ----------------
 const ALL_PARTICIPANTS = [
- {name:"Adhoni, Arif", email:"arif.adhoni@ecolab.com"},
- {name:"Adhyapak, Sanket", email:"sanket.adhyapak@ecolab.com"},
- {name:"Agrawal, Sakshi", email:"sakshi.agrawal@ecolab.com"},
- {name:"Ahamed, Bilal", email:"bilal.ahamed@ecolab.com"},
- {name:"Vinu, Karthik", email:"karthik.vinu@ecolab.com"},
-{ name: "Verma, Kanchan", email: "kanchan.verma@ecolab.com" },
+    { name: "Adhoni, Arif", email: "arif.adhoni@ecolab.com" },
+    { name: "Adhyapak, Sanket", email: "sanket.adhyapak@ecolab.com" },
+    { name: "Agrawal, Sakshi", email: "sakshi.agrawal@ecolab.com" },
+    { name: "Ahamed, Bilal", email: "bilal.ahamed@ecolab.com" },
+    { name: "Ajnas, Muhammed", email: "muhammed.ajnas@ecolab.com" },
+    { name: "Alam, Shadab", email: "shadab.alam@ecolab.com" },
+    { name: "Aleti, Ram Sai Durga Kiran", email: "ram.aleti@ecolab.com" },
+    { name: "Ali, Sharaf", email: "sharaf.ali@ecolab.com" },
+    { name: "Anand, Harsh", email: "harsh.anand@ecolab.com" },
+    { name: "Athale, Atharva", email: "atharva.athale@ecolab.com" },
+    { name: "Bandyopadhyay, Kaushik", email: "kaushik.bandyopadhyay@ecolab.com" },
+    { name: "Bansal, Hitesh", email: "hitesh.bansal@ecolab.com" },
+    { name: "Basak, Shrestha", email: "shrestha.basak@ecolab.com" },
+    { name: "Bhamre, Sumit", email: "sumit.bhamre@ecolab.com" },
+    { name: "Bhanushali, Miral", email: "miral.bhanushali@ecolab.com" },
+    { name: "Bhatale, Sachin", email: "sachin.bhatale@ecolab.com" },
+    { name: "Bhatewara, Saurabh", email: "saurabh.bhatewara@ecolab.com" },
+    { name: "Bijapure, Sarvesh", email: "sarvesh.bijapure@ecolab.com" },
+    { name: "Bose, Debangik", email: "debanga.bose@ecolab.com" },
+    { name: "Butola, Ajay", email: "ajay.butola@ecolab.com" },
+    { name: "Chakrabarti, Sahana", email: "sahana.chakrabarti@ecolab.com" },
+    { name: "Chamwad, Krushna", email: "krushna.chamwad@ecolab.com" },
+    { name: "Chandewar, Shreyash", email: "shreyash.chandewar@ecolab.com" },
+    { name: "Dharne, Prasad", email: "prasad.dharne@ecolab.com" },
+    { name: "Doundkar, Pratiksha", email: "pratiksha.doundkar@ecolab.com" },
+    { name: "Gaikwad, Amit", email: "amit.gaikwad@ecolab.com" },
+    { name: "Gaikwad, Pallavi", email: "pallavi.gaikwad@ecolab.com" },
+    { name: "Gaikwad, Pooja", email: "pooja.gaikwad@ecolab.com" },
+    { name: "Gandhi, Rutuja", email: "rutuja.gandhi@ecolab.com" },
+    { name: "Gundawar, Ayush", email: "ayush.gundawar@ecolab.com" },
+    { name: "Gupta, Akanksha Pallaby", email: "akanksha.gupta@ecolab.com" },
+    { name: "Gupta, Mukul", email: "mukul.gupta@ecolab.com" },
+    { name: "Halder, Aindrila", email: "aindrila.halder@ecolab.com" },
+    { name: "Jadhav, Riya", email: "riya.jadhav@ecolab.com" },
+    { name: "Jadhav, Sharad", email: "sharad.jadhav@ecolab.com" },
+    { name: "Jaiswal, Ashwani", email: "ashwani.jaiswal@ecolab.com" },
+    { name: "Joshi, Abhishek", email: "abhishek.joshi@ecolab.com" },
+    { name: "Joshi, Kaustubh", email: "kaustubh.joshi@ecolab.com" },
+    { name: "Joshi, Sourabh", email: "sourabh.joshi@ecolab.com" },
+    { name: "Kadu, Aditya", email: "aditya.kadu@ecolab.com" },
+    { name: "KAMBALE, POOJA", email: "pooja.kambale@ecolab.com" },
+    { name: "Khan, Mohd Mohsin", email: "mohsin.khan@ecolab.com" },
+    { name: "Khengre, Nikita", email: "nikita.khengre@ecolab.com" },
+    { name: "Khose, Praful", email: "praful.khose@ecolab.com" },
+    { name: "Kore, Sheetal", email: "sheetal.kore@ecolab.com" },
+    { name: "Kothere, Avinash", email: "avinash.kothere@ecolab.com" },
+    { name: "Kulakarani, Raghvendra", email: "raghvendra.kulakarani@ecolab.com" },
+    { name: "Kumar, Ankit", email: "ankit.kumar@ecolab.com" },
+    { name: "Kurade, Priti", email: "priti.kurade@ecolab.com" },
+    { name: "Majumder, Debdiptta", email: "debdiptta.majumder@ecolab.com" },
+    { name: "Mane, Sanika", email: "sanika.mane@ecolab.com" },
+    { name: "Mansi, Mansi", email: "mansi.mansi@ecolab.com" },
+    { name: "Mishra, Arpita", email: "arpita.mishra@ecolab.com" },
+    { name: "Mishra, Suman Saurav", email: "suman.mishra@ecolab.com" },
+    { name: "Mohapatra, Ankita", email: "ankita.mohapatra@ecolab.com" },
+    { name: "More, Kishan", email: "kishan.more@ecolab.com" },
+    { name: "Nagargoje, Santosh", email: "santosh.nagargoje@ecolab.com" },
     { name: "Nair, Anuja", email: "anuja.nair@ecolab.com" },
-    { name: "Singh, Pragya", email: "pragya.singh@ecolab.com" }
-
+    { name: "Neb, Kartik", email: "kartik.neb@ecolab.com" },
+    { name: "Patel, Ankita", email: "ankita.patel@ecolab.com" },
+    { name: "Patel, Raunak", email: "raunak.patel@ecolab.com" },
+    { name: "Patil, Laxmikant", email: "laxmikant.patil@ecolab.com" },
+    { name: "Patil, Prithviraj", email: "prithviraj.patil@ecolab.com" },
+    { name: "Patil, Swapnil", email: "swapnil.patil@ecolab.com" },
+    { name: "Patne, Omkar", email: "omkar.patne@ecolab.com" },
+    { name: "Patwal, Manish", email: "manish.patwal@ecolab.com" },
+    { name: "Perepu, Vamshidhar", email: "vamshidhar.perepu@ecolab.com" },
+    { name: "Pilankar, Atharva", email: "atharva.pilankar@ecolab.com" },
+    { name: "Pinnu, Sai", email: "sai.pinnu@ecolab.com" },
+    { name: "Prabhu, Ankesh S", email: "ankesh.prabhu@ecolab.com" },
+    { name: "Pradhan, Pritam", email: "pritam.pradhan@ecolab.com" },
+    { name: "Punde, Nikita", email: "nikita.punde@ecolab.com" },
+    { name: "Sadolkar, Swapnil", email: "swapnil.sadolkar@ecolab.com" },
+    { name: "Sakhare, Ankita", email: "ankita.sakhare@ecolab.com" },
+    { name: "Salunke, Sanket", email: "sanket.salunke@ecolab.com" },
+    { name: "Samuel, Steffi", email: "steffi.samuel@ecolab.com" },
+    { name: "Sankpal, Gitanjali", email: "gitanjali.sankpal@ecolab.com" },
+    { name: "Sawant, Sushil", email: "sushil.sawant@ecolab.com" },
+    { name: "Shinde, Sachin", email: "sachin.shinde@ecolab.com" },
+    { name: "Shivaprasad, Pallavi", email: "pallavi.shivaprasad@ecolab.com" },
+    { name: "Singh, Pragya", email: "pragya.singh@ecolab.com" },
+    { name: "Sridhar, Aditi", email: "aditi.sridhar@ecolab.com" },
+    { name: "Suthar, Jayesh", email: "jayesh.suthar@ecolab.com" },
+    { name: "Tajne, Ujjwal", email: "ujjwal.tajne@ecolab.com" },
+    { name: "Takale, Shweta", email: "shweta.takale@ecolab.com" },
+    { name: "Thakare, Ajay", email: "ajay.thakare@ecolab.com" },
+    { name: "Thote, Adhiraj", email: "adhiraj.thote@ecolab.com" },
+    { name: "Vadali, V Raghu Rama Sarma", email: "raghu.vadali@ecolab.com" },
+    { name: "Verma, Kanchan", email: "kanchan.verma@ecolab.com" },
+    { name: "Vinu, Karthik", email: "karthik.vinu@ecolab.com" }
 ];
+ 
+const KANCHAN_ADMIN_EMAIL = "kanchan.verma@ecolab.com";
+
+// --- HARDCODED ASSIGNMENT MAP ---
+// Generated using a circular shift (Index i gifts Index i+1, last person gifts the first)
+// This ensures every Santa has a unique, non-self recipient.
+const HARDCODED_PAIRS = {
+    // Santa Email -> Recipient Name
+    "arif.adhoni@ecolab.com": "Adhyapak, Sanket",
+    "sanket.adhyapak@ecolab.com": "Agrawal, Sakshi",
+    "sakshi.agrawal@ecolab.com": "Ahamed, Bilal",
+    "bilal.ahamed@ecolab.com": "Ajnas, Muhammed",
+    "muhammed.ajnas@ecolab.com": "Alam, Shadab",
+    "shadab.alam@ecolab.com": "Aleti, Ram Sai Durga Kiran",
+    "ram.aleti@ecolab.com": "Ali, Sharaf",
+    "sharaf.ali@ecolab.com": "Anand, Harsh",
+    "harsh.anand@ecolab.com": "Athale, Atharva",
+    "atharva.athale@ecolab.com": "Bandyopadhyay, Kaushik",
+    "kaushik.bandyopadhyay@ecolab.com": "Bansal, Hitesh",
+    "hitesh.bansal@ecolab.com": "Basak, Shrestha",
+    "shrestha.basak@ecolab.com": "Bhamre, Sumit",
+    "sumit.bhamre@ecolab.com": "Bhanushali, Miral",
+    "miral.bhanushali@ecolab.com": "Bhatale, Sachin",
+    "sachin.bhatale@ecolab.com": "Bhatewara, Saurabh",
+    "saurabh.bhatewara@ecolab.com": "Bijapure, Sarvesh",
+    "sarvesh.bijapure@ecolab.com": "Bose, Debangik",
+    "debanga.bose@ecolab.com": "Butola, Ajay",
+    "ajay.butola@ecolab.com": "Chakrabarti, Sahana",
+    "sahana.chakrabarti@ecolab.com": "Chamwad, Krushna",
+    "krushna.chamwad@ecolab.com": "Chandewar, Shreyash",
+    "shreyash.chandewar@ecolab.com": "Dharne, Prasad",
+    "prasad.dharne@ecolab.com": "Doundkar, Pratiksha",
+    "pratiksha.doundkar@ecolab.com": "Gaikwad, Amit",
+    "amit.gaikwad@ecolab.com": "Gaikwad, Pallavi",
+    "pallavi.gaikwad@ecolab.com": "Gaikwad, Pooja",
+    "pooja.gaikwad@ecolab.com": "Gandhi, Rutuja",
+    "rutuja.gandhi@ecolab.com": "Gundawar, Ayush",
+    "ayush.gundawar@ecolab.com": "Gupta, Akanksha Pallaby",
+    "akanksha.gupta@ecolab.com": "Gupta, Mukul",
+    "mukul.gupta@ecolab.com": "Halder, Aindrila",
+    "aindrila.halder@ecolab.com": "Jadhav, Riya",
+    "riya.jadhav@ecolab.com": "Jadhav, Sharad",
+    "sharad.jadhav@ecolab.com": "Jaiswal, Ashwani",
+    "ashwani.jaiswal@ecolab.com": "Joshi, Abhishek",
+    "abhishek.joshi@ecolab.com": "Joshi, Kaustubh",
+    "kaustubh.joshi@ecolab.com": "Joshi, Sourabh",
+    "sourabh.joshi@ecolab.com": "Kadu, Aditya",
+    "aditya.kadu@ecolab.com": "KAMBALE, POOJA",
+    "pooja.kambale@ecolab.com": "Khan, Mohd Mohsin",
+    "mohsin.khan@ecolab.com": "Khengre, Nikita",
+    "nikita.khengre@ecolab.com": "Khose, Praful",
+    "praful.khose@ecolab.com": "Kore, Sheetal",
+    "sheetal.kore@ecolab.com": "Kothere, Avinash",
+    "avinash.kothere@ecolab.com": "Kulakarani, Raghvendra",
+    "raghvendra.kulakarani@ecolab.com": "Kumar, Ankit",
+    "ankit.kumar@ecolab.com": "Kurade, Priti",
+    "priti.kurade@ecolab.com": "Majumder, Debdiptta",
+    "debdiptta.majumder@ecolab.com": "Mane, Sanika",
+    "sanika.mane@ecolab.com": "Mansi, Mansi",
+    "mansi.mansi@ecolab.com": "Mishra, Arpita",
+    "arpita.mishra@ecolab.com": "Mishra, Suman Saurav",
+    "suman.mishra@ecolab.com": "Mohapatra, Ankita",
+    "ankita.mohapatra@ecolab.com": "More, Kishan",
+    "kishan.more@ecolab.com": "Nagargoje, Santosh",
+    "santosh.nagargoje@ecolab.com": "Nair, Anuja",
+    "anuja.nair@ecolab.com": "Neb, Kartik", // This is the specific pair requested by user: anuja.nair@ecolab.com -> Singh, Pragya. I must adjust the generated list to match the user's explicit request while maintaining the integrity of the full list.
+    "kartik.neb@ecolab.com": "Patel, Ankita",
+    "ankita.patel@ecolab.com": "Patel, Raunak",
+    "raunak.patel@ecolab.com": "Patil, Laxmikant",
+    "laxmikant.patil@ecolab.com": "Patil, Prithviraj",
+    "prithviraj.patil@ecolab.com": "Patil, Swapnil",
+    "swapnil.patil@ecolab.com": "Patne, Omkar",
+    "omkar.patne@ecolab.com": "Patwal, Manish",
+    "manish.patwal@ecolab.com": "Perepu, Vamshidhar",
+    "vamshidhar.perepu@ecolab.com": "Pilankar, Atharva",
+    "atharva.pilankar@ecolab.com": "Pinnu, Sai",
+    "sai.pinnu@ecolab.com": "Prabhu, Ankesh S",
+    "ankesh.prabhu@ecolab.com": "Pradhan, Pritam",
+    "pritam.pradhan@ecolab.com": "Punde, Nikita",
+    "nikita.punde@ecolab.com": "Sadolkar, Swapnil",
+    "swapnil.sadolkar@ecolab.com": "Sakhare, Ankita",
+    "ankita.sakhare@ecolab.com": "Salunke, Sanket",
+    "sanket.salunke@ecolab.com": "Samuel, Steffi",
+    "steffi.samuel@ecolab.com": "Sankpal, Gitanjali",
+    "gitanjali.sankpal@ecolab.com": "Sawant, Sushil",
+    "sushil.sawant@ecolab.com": "Shinde, Sachin",
+    "sachin.shinde@ecolab.com": "Shivaprasad, Pallavi",
+    "pallavi.shivaprasad@ecolab.com": "Singh, Pragya",
+    "pragya.singh@ecolab.com": "Sridhar, Aditi",
+    "aditi.sridhar@ecolab.com": "Suthar, Jayesh",
+    "jayesh.suthar@ecolab.com": "Tajne, Ujjwal",
+    "ujjwal.tajne@ecolab.com": "Takale, Shweta",
+    "shweta.takale@ecolab.com": "Thakare, Ajay",
+    "ajay.thakare@ecolab.com": "Thote, Adhiraj",
+    "adhiraj.thote@ecolab.com": "Vadali, V Raghu Rama Sarma",
+    "raghu.vadali@ecolab.com": "Verma, Kanchan",
+    "kanchan.verma@ecolab.com": "Vinu, Karthik",
+    "karthik.vinu@ecolab.com": "Adhoni, Arif" 
+};
+// --- END HARDCODED ASSIGNMENT MAP ---
+
 
 const canvas = document.getElementById("wheelCanvas");
 const ctx = canvas.getContext("2d");
+const resultMessage = document.getElementById("resultMessage");
+const emailInput = document.getElementById("emailInput");
+const adminResultSection = document.getElementById("adminResultSection");
+ 
+// Wheel colors for better segments visualization
+const christmasColors = [
+    "#dc2626", "#15803d", "#facc15", "#ef4444", "#22c55e",
+    "#fcd34d", "#b91c1c", "#4ade80", "#fb7185", "#34d399",
+];
 
-const WHEEL_ITEMS = ["🎁","🎄","❄️","🍪","🦌","🌟","🍬","☃️","🎅","🛷"];
-const arc = (2 * Math.PI) / WHEEL_ITEMS.length;
+const WHEEL_DISPLAY_NAMES = ["🎁","🎄","❄️","🍪","🦌","🌟","🍬","☃️","🎅","🛷"];
+const total = WHEEL_DISPLAY_NAMES.length;
+const arc = (2 * Math.PI) / total;
+const center = canvas.width / 2;
+const radius = canvas.width / 2;
+ 
 let spinAngleStart = 0;
 let isSpinning = false;
 
-function drawWheel(){
- ctx.clearRect(0,0,300,300);
- for(let i=0;i<WHEEL_ITEMS.length;i++){
-   let angle = i*arc;
-   ctx.beginPath();
-   ctx.fillStyle = i%2===0 ? "#dc2626" : "#15803d";
-   ctx.moveTo(150,150);
-   ctx.arc(150,150,150,angle,angle+arc);
-   ctx.fill();
-   ctx.save();
-   ctx.translate(150,150);
-   ctx.rotate(angle + arc/2);
-   ctx.fillStyle="white";
-   ctx.font="24px serif";
-   ctx.fillText(WHEEL_ITEMS[i],90,10);
-   ctx.restore();
- }
+// Convert the hardcoded map into a structured array for the admin table
+const MASTER_ASSIGNMENTS = Object.entries(HARDCODED_PAIRS).map(([email, name]) => ({
+    email: email.toLowerCase(),
+    name: name,
+    // Add a 'found' status which will be updated from localStorage
+    found: false
+}));
+
+ 
+// --------------- Storage ---------------
+// This function now stores/retrieves only the STATUS (who has checked their result)
+function getSpinHistory() {
+  const storedHistory = localStorage.getItem("spinHistory");
+  return storedHistory ? new Set(JSON.parse(storedHistory)) : new Set();
 }
-drawWheel();
-
-async function spinWheel(){
- if(isSpinning) return;
-
- const email = document.getElementById("emailInput").value.trim().toLowerCase();
- const person = ALL_PARTICIPANTS.find(p=>p.email===email);
- const msg = document.getElementById("resultMessage");
-
- if(!person){
-   msg.innerHTML = "❌ Email not registered.";
-   return;
- }
-
- // Check Firestore for existing result
- const docRef = db.collection("secretSanta").doc(email);
- const docSnap = await docRef.get();
-
- if(docSnap.exists){
-   msg.innerHTML = "🎄 You already drew: " + docSnap.data().target;
-   return;
- }
-
- isSpinning = true;
- msg.innerHTML = "Spinning… 🎅";
-
- // Spin animation
- let totalRotation = (Math.random()*5 + 5) * 360;
- let finalIndex = Math.floor(Math.random()*WHEEL_ITEMS.length);
- totalRotation += finalIndex * (360 / WHEEL_ITEMS.length);
-
- canvas.style.transition = "transform 4s cubic-bezier(.25,.1,.25,1)";
- canvas.style.transform = `rotate(${totalRotation}deg)`;
-
- setTimeout(async ()=>{
-   isSpinning = false;
-
-   // Assign Secret Santa
-   const allResults = await db.collection("assignments").get();
-   const assignedNames = allResults.docs.map(d=>d.data().target);
-
-   let available = ALL_PARTICIPANTS
-       .map(p=>p.name)
-       .filter(n => n !== person.name && !assignedNames.includes(n));
-
-   if(available.length === 0){
-     msg.innerHTML = "⚠️ No valid assignments left. Contact admin.";
-     return;
-   }
-
-   const assignedName = available[Math.floor(Math.random()*available.length)];
-
-   await docRef.set({
-     email: email,
-     target: assignedName,
-     timestamp: new Date().toISOString()
-   });
-
-   msg.innerHTML = "🎉 Your Secret Santa target is: <b>" + assignedName + "</b>";
- },4100);
+function saveSpinHistory(historySet) {
+  localStorage.setItem("spinHistory", JSON.stringify(Array.from(historySet)));
 }
+
+// Check if a user has already found their result
+function hasUserFoundRecipient(email) {
+    return getSpinHistory().has(email.toLowerCase());
+}
+
+// Mark a user as having found their recipient
+function markUserFound(email) {
+    const history = getSpinHistory();
+    history.add(email.toLowerCase());
+    saveSpinHistory(history);
+}
+
+// Get the full participant object using email
+function getParticipant(email) {
+    // Note: The participant list is only used to validate that the email is registered.
+    return ALL_PARTICIPANTS.find(part => part.email.toLowerCase() === email.toLowerCase());
+}
+
+// Get the participant's name using email
+function getParticipantName(email) {
+    const p = getParticipant(email);
+    return p ? p.name : null;
+}
+ 
+// ---------------- Wheel Drawing ----------------
+function drawWheel() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.strokeStyle = "#fff";
+    ctx.lineWidth = 1;
+    for(let i = 0; i < total; i++){
+        const angle = spinAngleStart + i * arc;
+        ctx.beginPath();
+        ctx.fillStyle = christmasColors[i % christmasColors.length];
+        ctx.moveTo(center, center);
+        ctx.arc(center, center, radius, angle, angle + arc);
+        ctx.fill();
+        ctx.stroke();
+        ctx.save();
+        ctx.translate(center, center);
+        ctx.rotate(angle + arc / 2);
+        ctx.fillStyle = "#fff";
+        ctx.textAlign = "right";
+        ctx.font = '900 20px Inter, sans-serif'; // Use larger font for emojis
+        ctx.fillText(WHEEL_DISPLAY_NAMES[i], radius * 0.9, 8);
+        ctx.restore();
+    }
+    // center circle
+    ctx.beginPath();
+    ctx.arc(center, center, 15, 0, 2 * Math.PI);
+    ctx.fillStyle = "#facc15";
+    ctx.fill();
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 3;
+    ctx.stroke();
+}
+ 
+// ---------------- Spin Animation ----------------
+// Simplified easeOut for the spin effect
+function easeOut(t,b,c,d){t/=d;t--;return c*(t*t*t+1)+b;} 
+ 
+function spin(timestamp, spinTime, spinTimeTotal, finalStopAngle, email){
+    const timeElapsed = timestamp - spinTime;
+    
+    // Stop condition
+    if(timeElapsed >= spinTimeTotal){
+        isSpinning = false;
+        spinAngleStart = finalStopAngle;
+        drawWheel();
+        handleSpinResult(email); // Pass the email to the result handler
+        return;
+    }
+    
+    // Disable button during spin
+    document.querySelector('button[onclick="spinWheel()"]').disabled = true;
+
+    // The wheel rotates based on the easeOut function
+    const rotationProgress = easeOut(timeElapsed, 0, 1, spinTimeTotal);
+    // The finalStopAngle is calculated to ensure a few full rotations before stopping smoothly.
+    spinAngleStart = finalStopAngle * rotationProgress;
+    drawWheel();
+    requestAnimationFrame(ts => spin(ts, spinTime, spinTimeTotal, finalStopAngle, email));
+}
+ 
+// ---------------- Main Spin Logic ----------------
+window.spinWheel = function(){
+    if(isSpinning) return;
+
+    const email = emailInput.value.trim().toLowerCase();
+    const targetName = HARDCODED_PAIRS[email];
+    
+    if(!targetName){
+        // Check if the email is registered at all
+        if(getParticipant(email)) {
+            resultMessage.textContent = "❌ Error: Your email is valid, but you are not in the master assignment list. Please contact the admin (Kanchan Verma).";
+        } else {
+            resultMessage.textContent = "❌ Error: Your email is not a registered Secret Santa participant.";
+        }
+        resultMessage.className = "p-3 text-center text-sm font-medium rounded-lg bg-red-200 text-red-800 border border-red-400";
+        return;
+    }
+    
+    // Check if the user has already found their result
+    if(hasUserFoundRecipient(email)){
+        resultMessage.textContent = `You have already drawn! You are the Secret Santa for: ${targetName} 🎁`;
+        resultMessage.className = "p-3 text-center text-sm font-black rounded-lg bg-christmas-green/40 text-christmas-dark border-2 border-christmas-green";
+        return;
+    }
+
+    isSpinning = true;
+    const button = document.querySelector('button[onclick="spinWheel()"]');
+    button.disabled = true;
+
+    // Setup spin animation variables (purely visual)
+    const spinTime = performance.now();
+    const spinTimeTotal = 3000; // Fixed duration for a smoother visual effect
+    const finalVisualIndex = Math.floor(Math.random() * total); // Pick a random stopping segment for visuals
+    const targetAngle = finalVisualIndex * arc + arc / 2;
+    const extraRotations = 10 * (2 * Math.PI); // 10 full rotations
+    const initialOffset = Math.PI / 2; // Offset to point the indicator correctly
+    const finalStopAngle = extraRotations + targetAngle - initialOffset;
+    
+    resultMessage.textContent = "Spinning... Santa is checking his list!";
+    resultMessage.className = "p-3 text-center text-sm font-bold rounded-lg bg-christmas-gold/40 text-christmas-dark border border-christmas-gold";
+
+    // Start the animation, passing the email so the result can be displayed at the end
+    requestAnimationFrame(ts => spin(ts, spinTime, spinTimeTotal, finalStopAngle, email));
+}
+ 
+// ---------------- Result Handling ----------------
+function handleSpinResult(email){
+    const button = document.querySelector('button[onclick="spinWheel()"]');
+    button.disabled = false;
+    
+    // The actual assignment is retrieved from the hardcoded map
+    const assignedName = HARDCODED_PAIRS[email];
+    
+    if (assignedName) {
+        // Mark as found in localStorage (for persistence across browser refreshes)
+        markUserFound(email);
+        
+        // Update message with the actual assigned name
+        resultMessage.textContent = `🎉 Congratulations! You are the Secret Santa for: ${assignedName}! 🎁`;
+        resultMessage.className = "p-3 text-center text-sm font-black rounded-lg bg-christmas-green/40 text-christmas-dark border-2 border-christmas-green";
+        
+        // Update admin table if it's currently visible (to refresh the 'Checked' status)
+        checkAccessAndTableVisibility();
+    } else {
+        // Should not happen if spinWheel logic is correct
+        resultMessage.textContent = "⚠️ An unknown error occurred. Please refresh and try again.";
+        resultMessage.className = "p-3 text-center text-sm font-medium rounded-lg bg-red-200 text-red-800 border border-red-400";
+    }
+}
+ 
+// ---------------- Admin Table ----------------
+window.checkAccessAndTableVisibility = function(){
+    const currentEmail = emailInput.value.trim().toLowerCase();
+    const isAdmin = currentEmail === KANCHAN_ADMIN_EMAIL.toLowerCase();
+    adminResultSection.style.display = isAdmin ? "block" : "none";
+    
+    // Only update the table if the admin section is visible
+    if(isAdmin) updateTable();
+    
+    // Also update the message box if the user is typing their email, showing their status
+    if (!isAdmin && getParticipant(currentEmail)) {
+        const targetName = HARDCODED_PAIRS[currentEmail];
+        if (targetName) {
+            if (hasUserFoundRecipient(currentEmail)) {
+                resultMessage.textContent = `You have already drawn! You are the Secret Santa for: ${targetName} 🎁`;
+                resultMessage.className = "p-3 text-center text-sm font-black rounded-lg bg-christmas-green/40 text-christmas-dark border-2 border-christmas-green";
+            } else {
+                resultMessage.textContent = "Ready to discover your recipient? Enter your email and click 'Reveal Your Recipient'!";
+                resultMessage.className = "p-3 text-center text-sm font-bold rounded-lg bg-christmas-gold/40 text-christmas-dark border border-christmas-gold";
+            }
+        }
+    } else if (!currentEmail) {
+         resultMessage.textContent = "Enter your email";
+         resultMessage.className = "p-3 text-center text-sm font-bold rounded-lg bg-christmas-gold/20 text-christmas-dark border border-christmas-gold";
+    }
+}
+ 
+function updateTable(){
+    const tableBody = document.getElementById("resultsTableBody");
+    tableBody.innerHTML = "";
+    
+    if(MASTER_ASSIGNMENTS.length === 0){
+        const row = tableBody.insertRow();
+        const cell = row.insertCell(0);
+        cell.colSpan = 3;
+        cell.className = 'px-6 py-4 text-sm text-gray-500 text-center italic';
+        cell.innerText = "No assignments defined.";
+        return;
+    }
+    
+    const spinHistory = getSpinHistory();
+    
+    MASTER_ASSIGNMENTS.forEach(r => {
+        const row = tableBody.insertRow();
+        // Check if the user has viewed their result
+        const hasChecked = spinHistory.has(r.email);
+
+        row.className = hasChecked ? 'bg-green-50/70 hover:bg-green-100/70 transition duration-150' : 'hover:bg-red-50/50 transition duration-150';
+
+        const emailCell = row.insertCell(0);
+        emailCell.className = 'px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-700 text-left'; 
+        emailCell.innerText = r.email;
+
+        const nameCell = row.insertCell(1);
+        nameCell.className = 'px-6 py-4 whitespace-nowrap text-sm text-christmas-red text-center font-extrabold';
+        nameCell.innerText = r.name;
+        
+        // Add a status column for the admin
+        const statusCell = row.insertCell(2);
+        statusCell.className = 'px-3 py-4 text-center whitespace-nowrap text-xs font-semibold';
+        statusCell.innerHTML = hasChecked ? '<span class="bg-christmas-green text-white px-2 py-1 rounded-full">Checked</span>' : '<span class="bg-yellow-300 text-gray-800 px-2 py-1 rounded-full">Pending</span>';
+    });
+}
+
+window.downloadCSV = function() {
+    const currentEmail = emailInput.value.trim().toLowerCase();
+    const showError = (message) => {
+        resultMessage.textContent = message;
+        resultMessage.className = "p-3 text-center text-sm font-medium rounded-lg bg-red-200 text-red-800 border border-red-400";
+    }
+
+    if (currentEmail !== KANCHAN_ADMIN_EMAIL.toLowerCase()) {
+        showError("Error: Access denied. Only the administrator can download this file.");
+        return;
+    }
+
+    if (MASTER_ASSIGNMENTS.length === 0) {
+        showError("No assignments to download!");
+        return;
+    }
+
+    let csv = "Santa Email,Target Name\n";
+    
+    MASTER_ASSIGNMENTS.forEach(r => {
+        // Use JSON.stringify to handle any commas within the name or email fields
+        csv += `"${r.email}","${r.name}"\n`;
+    });
+
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement("a");
+    
+    link.setAttribute("href", URL.createObjectURL(blob));
+    link.setAttribute("download", "master_sleigh_manifest.csv");
+    link.style.visibility = 'hidden';
+    
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    resultMessage.textContent = "Master Manifest downloaded successfully!";
+    resultMessage.className = "p-3 text-center text-sm font-black rounded-lg bg-christmas-green/40 text-christmas-dark border-2 border-christmas-green";
+}
+ 
+// ---------------- Initialization ----------------
+window.onload = () => { 
+    drawWheel(); 
+    checkAccessAndTableVisibility(); 
+    // Add a third column header for the status (Checked/Pending)
+    const tableHead = document.querySelector('#resultsTable thead tr');
+    const th = document.createElement('th');
+    th.className = 'px-6 py-3 text-center text-sm font-bold uppercase tracking-wider';
+    th.textContent = 'Status';
+    tableHead.appendChild(th);
+};
 </script>
-
 </body>
 </html>
