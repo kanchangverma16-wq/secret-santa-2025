@@ -135,7 +135,7 @@
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
     import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-    import { getFirestore, doc, setDoc, onSnapshot, collection, query, where, getDocs, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+    import { getFirestore, doc, setDoc, onSnapshot, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
     import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 
     // Set Firebase log level for debugging
@@ -143,7 +143,8 @@
 
     // --- Global Firebase State ---
     let app, db, auth;
-    const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-secret-santa-app';
+    // Check if variables are defined; if not, they will be null or fallback to default
+    const appId = typeof __app_id !== 'undefined' ? __app_id : null;
     const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
     let userId = null;
     let isAuthReady = false;
@@ -153,7 +154,8 @@
     window.isSpinning = false;
     // CRITICAL: Use the Public path for shared, multi-user data (all assignments)
     // /artifacts/{appId}/public/data/secret_santa_results
-    const RESULTS_COLLECTION_PATH = `artifacts/${appId}/public/data/secret_santa_results`;
+    // Use a placeholder path if appId is not available, but operations will fail.
+    const RESULTS_COLLECTION_PATH = appId ? `artifacts/${appId}/public/data/secret_santa_results` : null;
 
     // ---------------- Participants ----------------
     const ALL_PARTICIPANTS = [
@@ -249,13 +251,17 @@
         { name: "Vinu, Karthik", email: "karthik.vinu@ecolab.com" }
     ];
     
-    const KANCHAN_ADMIN_EMAIL = "kanchan.verma@ecolab.com";
+    // !!! CRITICAL: UPDATE THIS EMAIL TO THE ADMINISTRATOR'S EMAIL !!!
+    const KANCHAN_ADMIN_EMAIL = "your.admin@email.com"; 
 
     // --- Firebase Initialization and Auth ---
     async function startFirestore() {
-        if (!firebaseConfig) {
-            console.error("Firebase config is missing.");
-            window.displayMessage("❌ Error: Firebase configuration failed.", "error");
+        // Check for missing required global variables
+        if (!firebaseConfig || !appId) {
+            console.error("Firebase configuration failed: Missing __firebase_config or __app_id.");
+            window.displayMessage("❌ Error: Firebase connection failed. App ID or Config is missing. (App is in preview/unconfigured state)", "error");
+            // Also explicitly disable the spin button since we can't save results.
+            document.getElementById("spinButton").disabled = true;
             return;
         }
 
@@ -285,18 +291,17 @@
         } catch (error) {
             console.error("Firebase initialization or authentication failed:", error);
             window.displayMessage(`❌ Error: Connection failed. ${error.message}`, "error");
-            isAuthReady = true; // Mark ready to stop waiting loop, even if failed
+            document.getElementById("spinButton").disabled = true; // Disable on general failure
         }
     }
 
     // --- Firestore Operations ---
     function listenForAssignments() {
-        if (!isAuthReady || !db) return;
+        if (!isAuthReady || !db || !RESULTS_COLLECTION_PATH) return;
 
         const resultsRef = collection(db, RESULTS_COLLECTION_PATH);
         
         // Listen for real-time updates to the results collection
-        // This public collection is necessary because all participants need to know which targets are already assigned.
         onSnapshot(resultsRef, (snapshot) => {
             window.spinResults = snapshot.docs.map(doc => doc.data());
             console.log("Results updated from Firestore:", window.spinResults.length, "assignments.");
@@ -308,11 +313,12 @@
         });
         
         window.displayMessage("Connection established. Enter your email to begin.", "default");
+        // Only enable the button if the connection is established and data is being monitored
         document.getElementById("spinButton").disabled = false;
     }
 
     async function saveAssignment(email, assignedName) {
-        if (!isAuthReady || !db) throw new Error("Database not ready.");
+        if (!isAuthReady || !db || !RESULTS_COLLECTION_PATH) throw new Error("Database not ready or path missing.");
 
         const emailDocId = email.replace(/[^a-zA-Z0-9]/g, '_'); // Sanitize email for document ID
         // Doc path: /artifacts/{appId}/public/data/secret_santa_results/{emailDocId}
@@ -354,7 +360,7 @@
     const spinButton = document.getElementById("spinButton");
 
     // Wheel constants
-    const KANCHAN_ADMIN_EMAIL = "kanchan.verma@ecolab.com"; // Repeated for non-module access
+    const KANCHAN_ADMIN_EMAIL = "kanchan.verma@ecolab.com"; // MUST BE KEPT IN SYNC with module scope definition
     const ALL_PARTICIPANTS = window.ALL_PARTICIPANTS || []; 
     const christmasColors = [
         "#dc2626", "#15803d", "#facc15", "#ef4444", "#22c55e",
@@ -461,6 +467,12 @@
     
     // ---------------- Main Spin Logic ----------------
     window.spinWheel = async function(){
+        // Prevent spinning if Firestore connection failed
+        if (spinButton.disabled && resultMessage.textContent.includes("Firebase connection failed")) {
+             window.displayMessage("❌ Error: Cannot spin. Firebase connection failed due to missing configuration.", "error");
+             return;
+        }
+
         if(window.isSpinning) return;
         
         const email = emailInput.value.trim().toLowerCase();
@@ -589,6 +601,14 @@
         // Control Admin section visibility based on email match
         adminResultSection.style.display = isAdmin ? "block" : "none";
         
+        // Check if the app is currently in a failed/unconfigured state
+        const isFailed = resultMessage.textContent.includes("Firebase connection failed");
+
+        if (isFailed) {
+            spinButton.disabled = true;
+            return;
+        }
+
         // Update spin button based on email validity and assignment status
         const spinnerName = window.getParticipantName(currentEmail);
         const existingResult = window.spinResults.find(r => r.email === currentEmail);
@@ -596,6 +616,7 @@
         if (isAdmin) {
             updateTable();
             window.displayMessage(`Welcome, Administrator! There are ${window.spinResults.length} assignments recorded.`, "info");
+            spinButton.disabled = true; // Admin doesn't need to spin again
         } else if (spinnerName) {
             if (existingResult) {
                 spinButton.disabled = true;
@@ -684,6 +705,7 @@
         } else {
             // Fallback message if module script fails to load
             window.displayMessage("Initialization failed. Check console for Firebase module errors.", "error");
+            document.getElementById("spinButton").disabled = true;
         }
     };
 </script>
